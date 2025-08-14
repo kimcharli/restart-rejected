@@ -1,0 +1,204 @@
+# Simple EVPN Commands Configuration
+# =====================================
+# 
+# Purpose: Implements core EVPN route status management functionality
+# Requirements: 
+#   1. Get evpn-ip-prefix-database-information (RPC command)
+#   2. Check adv-ip-route-status field (inspection)
+#   3. List count of each status (default action)
+#   4. Optionally restart routing if any entry is 'Rejected' (fix action)
+#
+# Usage:
+#   - View details: python examples/test_command_usage.py simple
+#   - Run tests: uv run pytest tests/test_command_runner.py::TestSimpleEVPNConfig
+#   - Validate: python tests/test_command_runner.py validate
+#
+# Documentation: docs/SIMPLE_EVPN_COMMANDS.md
+
+evpn_commands:
+  # Command 1: Basic EVPN route status check and count
+  evpn_status_check:
+    rpc_command: "get-evpn-ip-prefix-database-information"
+    rpc_parameters:
+      direction: "imported"
+    inspect: "adv-ip-route-status"
+    default_action: "list-count"
+    description: "Get EVPN routes and count each route status"
+    
+    # What to look for in the response
+    status_field: "adv-ip-route-status"
+    expected_statuses:
+      - "Accepted"
+      - "Rejected" 
+      - "Pending"
+      - "Invalid"
+    
+    # Default operation - always executed
+    actions:
+      list_count:
+        type: "count_statuses"
+        output: "summary"
+        description: "Count and display number of routes in each status"
+        
+  # Command 2: EVPN remediation when issues found
+  evpn_fix_rejected:
+    rpc_command: "get-evpn-ip-prefix-database-information"
+    rpc_parameters:
+      direction: "imported"
+    inspect: "adv-ip-route-status"
+    trigger_condition: "any_status == 'Rejected'"
+    action_tag: "fix"
+    description: "Fix rejected EVPN routes by restarting routing"
+    
+    # Conditional operation - only if rejected routes found
+    actions:
+      restart_routing:
+        type: "rpc_command"
+        rpc: "restart-routing-process"
+        condition: "rejected_count > 0"
+        description: "Restart routing process to fix rejected routes"
+        confirmation_required: true
+        
+      verify_fix:
+        type: "verification"
+        wait_time: 30
+        re_check: true
+        description: "Wait and verify routes are now accepted"
+
+# Simple workflow definitions
+workflows:
+  # Workflow 1: Check status only (default operation)
+  status_only:
+    description: "List count of each route status - default operation"
+    steps:
+      - command: "evpn_status_check"
+        action: "list_count"
+    
+  # Workflow 2: Check status and fix if needed (optional action)  
+  check_and_fix:
+    description: "Check status and restart routing if rejected routes found"
+    steps:
+      - command: "evpn_status_check" 
+        action: "list_count"
+      - command: "evpn_fix_rejected"
+        action: "restart_routing"
+        condition: "previous_step.rejected_count > 0"
+      - command: "evpn_fix_rejected"
+        action: "verify_fix"
+
+# Simple rule definitions
+rules:
+  # Rule 1: Always count statuses (default)
+  always_count:
+    trigger: "always"
+    action: "list_count"
+    description: "Default operation - always show route status counts"
+    
+  # Rule 2: Fix rejected routes (optional)
+  fix_rejected:
+    trigger: "rejected_routes > 0"
+    action: "restart_routing"
+    action_tag: "fix"
+    description: "Optional action - restart routing if rejected routes found"
+    confirmation_required: true
+
+# Expected output formats
+output_formats:
+  summary:
+    description: "Simple count summary"
+    template: |
+      EVPN Route Status Count:
+        Accepted: {accepted_count}
+        Rejected: {rejected_count}
+        Pending: {pending_count}
+        Total: {total_count}
+        
+  detailed:
+    description: "Detailed status with action recommendations"
+    template: |
+      EVPN Route Status Analysis:
+        Total Routes: {total_count}
+        Status Breakdown:
+          - Accepted: {accepted_count}
+          - Rejected: {rejected_count}
+          - Pending: {pending_count}
+          - Other: {other_count}
+        
+        Recommendation: {recommendation}
+        Action Available: {action_available}
+
+# CLI command mapping
+cli_commands:
+  # Default command - just show counts
+  default:
+    command: "jpt evpn count-status"
+    workflow: "status_only"
+    description: "Show count of each EVPN route status (default operation)"
+    
+  # Fix command - show counts and optionally restart routing  
+  fix:
+    command: "jpt evpn count-status --fix"
+    workflow: "check_and_fix"  
+    description: "Show counts and restart routing if rejected routes found"
+    action_tag: "fix"
+    
+  # Alternative syntax
+  fix_alt:
+    command: "jpt evpn fix-rejected"
+    workflow: "check_and_fix"
+    description: "Check for rejected routes and fix them"
+    action_tag: "fix"
+
+# Implementation mapping to existing code
+implementation_mapping:
+  rpc_command: "get-evpn-ip-prefix-database-information"
+  python_method: "device.rpc.get_evpn_ip_prefix_database_information(direction='imported')"
+  parser_class: "EVPNParser"
+  status_extraction: "route.find('.//adv-ip-route-status').text"
+  
+  actions:
+    list_count:
+      method: "count_route_statuses"
+      implementation: |
+        status_counts = {}
+        for route in routes:
+          status = route.get('status', 'Unknown')
+          status_counts[status] = status_counts.get(status, 0) + 1
+        return status_counts
+        
+    restart_routing:
+      method: "restart_routing_process" 
+      rpc: "restart-routing-process"
+      implementation: "device.rpc.restart_routing_process()"
+
+# Simple test scenarios
+test_scenarios:
+  healthy_network:
+    description: "All routes accepted"
+    mock_data:
+      total_routes: 50
+      accepted: 50
+      rejected: 0
+      pending: 0
+    expected_output: "Accepted: 50, Rejected: 0, Total: 50"
+    expected_action: "none"
+    
+  network_with_issues:
+    description: "Some routes rejected" 
+    mock_data:
+      total_routes: 50
+      accepted: 47
+      rejected: 3
+      pending: 0
+    expected_output: "Accepted: 47, Rejected: 3, Total: 50"
+    expected_action: "restart_routing"
+    expected_recommendation: "Restart routing recommended (3 rejected routes)"
+
+# Minimal configuration for immediate implementation
+minimal_config:
+  rpc: "get-evpn-ip-prefix-database-information"
+  inspect_field: "adv-ip-route-status"
+  default_action: "count_statuses"
+  fix_action: "restart-routing-process"
+  fix_trigger: "rejected_count > 0"
+  fix_tag: "fix"

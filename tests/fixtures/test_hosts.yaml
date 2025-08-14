@@ -1,0 +1,30 @@
+# Test hosts configuration for unit testing
+defaults:
+  port: 22
+  timeout: 30
+  retry_attempts: 3
+  admin_user: testuser
+  user_password:
+    testuser: testpass123
+    root: rootpass123
+
+host_groups:
+  test_switches:
+    - host: 192.168.1.100
+      tags: [qfx, evpn, test]
+    - host: 192.168.1.101
+      tags: [qfx, evpn, test]
+    - host: 192.168.1.102
+      username: root
+      tags: [qfx, evpn, test, rejected_routes]
+  
+  mock_devices:
+    - host: mock-device-1.local
+      username: testuser
+      tags: [mock, healthy]
+    - host: mock-device-2.local
+      username: testuser
+      tags: [mock, rejected_routes]
+    - host: mock-device-3.local
+      username: testuser
+      tags: [mock, no_routes]

@@ -1,0 +1,1 @@
+"""Tests for restart-rejected EVPN management tool."""

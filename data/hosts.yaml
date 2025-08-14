@@ -1,0 +1,31 @@
+# hosts.yaml
+defaults:
+  port: 22
+  timeout: 30
+  retry_attempts: 3
+  admin_user: labroot
+  user_password:
+    root: root123
+    labroot: lab123
+
+host_groups:
+  evpn_switches:
+    - host: 10.85.192.14
+      name: leaf1
+      tags: [qfx, evpn, production]
+    - host: 10.85.192.15
+      tags: [qfx, evpn, production]
+    - host: 10.85.192.16
+      name: leaf3
+      username: labroot
+      tags: [qfx, evpn, production]
+    - host: 10.85.192.17
+      username: root
+      tags: [qfx, evpn, staging]
+      
+  # mx_routers:
+  #   - host: 192.168.1.1
+  #     username: admin
+  #     password: admin123
+  #     timeout: 60
+  #     tags: [mx, core]
