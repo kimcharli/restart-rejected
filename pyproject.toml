@@ -59,7 +59,7 @@ packages = ["."]
 
 [tool.black]
 line-length = 88
-target-version = ['py39', 'py310', 'py311']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -75,8 +75,10 @@ extend-exclude = '''
 )/
 '''
 
+[tool.ruff]
+target-version = "py311"
+
 [tool.ruff.lint]
-target-version = "py39"
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -97,7 +99,7 @@ ignore = [
 
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

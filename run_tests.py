@@ -44,7 +44,7 @@ def main():
     
     # 1. Install dependencies
     success = run_command(
-        ["uv", "sync"],
+        ["uv", "sync", "--all-extras"],
         "Installing dependencies"
     )
     if not success:

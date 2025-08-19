@@ -79,48 +79,32 @@ MIXED_STATUS_RESPONSE = """
 </evpn-ip-prefix-database-information>
 """
 
+
 def get_mock_xml_response(response_type: str):
     """Get parsed XML response for testing."""
     responses = {
-        'healthy': HEALTHY_EVPN_RESPONSE,
-        'rejected': REJECTED_ROUTES_RESPONSE,
-        'empty': EMPTY_EVPN_RESPONSE,
-        'mixed': MIXED_STATUS_RESPONSE
+        "healthy": HEALTHY_EVPN_RESPONSE,
+        "rejected": REJECTED_ROUTES_RESPONSE,
+        "empty": EMPTY_EVPN_RESPONSE,
+        "mixed": MIXED_STATUS_RESPONSE,
     }
-    
+
     if response_type not in responses:
         raise ValueError(f"Unknown response type: {response_type}")
-    
+
     return etree.fromstring(responses[response_type])
+
 
 # Expected results for each scenario
 EXPECTED_RESULTS = {
-    'healthy': {
-        'Accepted': 3,
-        'Rejected': 0,
-        'Pending': 0,
-        'Invalid': 0,
-        'Unknown': 0
+    "healthy": {"Accepted": 3, "Rejected": 0, "Pending": 0, "Invalid": 0, "Unknown": 0},
+    "rejected": {
+        "Accepted": 1,
+        "Rejected": 2,
+        "Pending": 1,
+        "Invalid": 0,
+        "Unknown": 0,
     },
-    'rejected': {
-        'Accepted': 1,
-        'Rejected': 2,
-        'Pending': 1,
-        'Invalid': 0,
-        'Unknown': 0
-    },
-    'empty': {
-        'Accepted': 0,
-        'Rejected': 0,
-        'Pending': 0,
-        'Invalid': 0,
-        'Unknown': 0
-    },
-    'mixed': {
-        'Accepted': 1,
-        'Rejected': 1,
-        'Pending': 1,
-        'Invalid': 1,
-        'Unknown': 1
-    }
+    "empty": {"Accepted": 0, "Rejected": 0, "Pending": 0, "Invalid": 0, "Unknown": 0},
+    "mixed": {"Accepted": 1, "Rejected": 1, "Pending": 1, "Invalid": 1, "Unknown": 1},
 }
